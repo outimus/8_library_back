@@ -1,4 +1,4 @@
-const { ApolloServer, UserInputError, gql } = require('apollo-server')
+const { ApolloServer, UserInputError, gql, AuthenticationError } = require('apollo-server')
 const mongoose = require('mongoose')
 const { v1: uuid } = require('uuid')
 const { off } = require('./models/author')
@@ -161,20 +161,21 @@ const resolvers = {
     bookCount:() => Book.collection.countDocuments(),
     authorCount:() => Author.collection.countDocuments(),
     allBooks: async (root, args) => {
+      if (Object.keys(args).length === 0) { //PALAUTTAA KAIKKI KIRJAT, jos args on tyhjä
+        return Book.find({})
+      }
+
       let author = await Author.findOne({ name: args.author })
       let books = await Book.find({})
 
-      if (Object.keys(args).length === 0) { //PALAUTTAA KAIKKI KIRJAT, jos args on tyhjä
-        return await Book.find({})
+      if (Object.keys(args).length === 2) { //JOs args sisältää haut 'genre' ja 'author'
+        books = await Book.find({ author: author._id, genres: [args.genre] })
       }
       if (Object.keys(args).includes('author')){
         books = await Book.find({ author: author._id})
       }
       if (Object.keys(args).includes('genre')) {
         books = await Book.find({ genres: [args.genre]})
-      }
-      if (Object.keys(args).length === 2) { //JOs args sisältää haut 'genre' ja 'author'
-        books = await Book.find({ author: author._id, genres: [args.genre] })
       }
       return books
     },
@@ -189,10 +190,15 @@ const resolvers = {
     bookCount: async (root) => {
       const books = await Book.find({ author: root._id })
       return books.length
-    } 
+    }
   },
   Mutation: {
-    addBook: async (root, args) => {
+    //vain kirjautuneelle
+    addBook: async (root, args, context) => {
+      const currentUser = context.currentUser
+      if (!currentUser) {
+        throw new AuthenticationError("not authenticated")
+      }
       let author = await Author.findOne({ name: args.author })
       if (!author){
         author = new Author({ 
@@ -222,7 +228,13 @@ const resolvers = {
       }
       return book
     },
-    editAuthor: async (root, args) => {
+    //vain kirjautuneelle
+    editAuthor: async (root, args, context) => {
+      const currentUser = context.currentUser
+      if (!currentUser) {
+        throw new AuthenticationError("not authenticated")
+      }
+
       const author = await Author.findOne({ name: args.name })
       author.born = args.setBornTo
       try {
