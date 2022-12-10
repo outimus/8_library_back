@@ -7,6 +7,7 @@ const Book = require('./models/book')
 const User = require('./models/user')
 
 const jwt = require('jsonwebtoken')
+const author = require('./models/author')
 const JWT_SECRET = 'NEED_HERE_A_SECRET_KEY'
 
 const MONGODB_URI = 'mongodb+srv://OM:OEM123456@cluster0.vkmxypp.mongodb.net/library '
@@ -158,10 +159,11 @@ const typeDefs = gql`
 
 const resolvers = {
   Query: {
-    bookCount:() => Book.collection.countDocuments(),
-    authorCount:() => Author.collection.countDocuments(),
+    bookCount: async () => Book.collection.countDocuments(),
+    authorCount: async () => Author.collection.countDocuments(),
     allBooks: async (root, args) => {
-      if (Object.keys(args).length === 0) { //PALAUTTAA KAIKKI KIRJAT, jos args on tyhjä
+      if (Object.keys(args).lenght === 0) { //PALAUTTAA KAIKKI KIRJAT, jos args on tyhjä
+        console.log('TÄÄLLÄ')
         return Book.find({})
       }
 
@@ -187,6 +189,14 @@ const resolvers = {
     }
   },
   Author: {
+    name: async (root) => {
+      const author = await Author.findOne({ _id: root })
+      return author.name
+    },
+    born: async (root) => {
+      const author = await Author.findOne({ _id: root })
+      return author.born
+    },
     bookCount: async (root) => {
       const books = await Book.find({ author: root._id })
       return books.length
