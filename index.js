@@ -130,7 +130,8 @@ const typeDefs = gql`
   type Query {
     bookCount: Int!
     authorCount: Int!
-    allBooks(author: String, genre: String): [Book!]!
+    allBooks (author: String, genre: String): [Book!]!
+    allGenres: [String!]!
     allAuthors: [Author!]!
     me: User
   }
@@ -162,27 +163,45 @@ const resolvers = {
     bookCount: async () => Book.collection.countDocuments(),
     authorCount: async () => Author.collection.countDocuments(),
     allBooks: async (root, args) => {
-      if (Object.keys(args).lenght === 0) { //PALAUTTAA KAIKKI KIRJAT, jos args on tyhjä
-        console.log('TÄÄLLÄ')
-        return Book.find({})
-      }
-
-      let author = await Author.findOne({ name: args.author })
+      console.log('täällä')
       let books = await Book.find({})
 
-      if (Object.keys(args).length === 2) { //JOs args sisältää haut 'genre' ja 'author'
-        books = await Book.find({ author: author._id, genres: [args.genre] })
+      if (!args.genre && !args.author) { //Ei filttereitä
+        return books
       }
-      if (Object.keys(args).includes('author')){
-        books = await Book.find({ author: author._id})
+      if (args.genre && !args.author) { //Genre -filtteri
+        books = books.filter((a) => a.genres.includes(args.genre.toLowerCase()))
+        console.log(books)
+        return books
       }
-      if (Object.keys(args).includes('genre')) {
-        books = await Book.find({ genres: [args.genre]})
+      if (!args.genre && args.author) { //Author -filtteri
+        const author = await Author.findOne({ name: args.author })
+        books = await Book.find({ author: author._id })
+        return books
       }
-      return books
+      if (args.genre && args.author) { //Author ja Genre -filtterit
+        const author = await Author.findOne({ name: args.author })
+        const booksByAuthor = await Book.find({ author: author._id })
+        books = booksByAuthor.filter((a) => a.genres.includes(args.genre.toLowerCase()))
+        return books
+      }
     },
     allAuthors: async (root, args) => {
       return Author.find({})
+    },
+    allGenres: async (root, args) => {
+      const books = await Book.find({})
+      let allGenres = []
+      books.map(b => {
+        if (b.genres.length > 0) {
+          b.genres.map(b => {
+            if (!allGenres.includes(b)) {
+              allGenres.push(b)
+            }
+          })
+        }
+      })
+      return allGenres
     },
     me: (root, args, context) => {
       return context.currentUser
