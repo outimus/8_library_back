@@ -153,11 +153,11 @@ const resolvers = {
         return { value: jwt.sign(userForToken, JWT_SECRET) }
       },
     },
-      Subscription: {
-        bookAdded: {
-            subscribe: () => pubsub.asyncIterator('BOOK_ADDED')
-            },
-         },
+    Subscription: {
+      bookAdded: {
+          subscribe: () => pubsub.asyncIterator('BOOK_ADDED')
+          },
+        },
       }
 
 module.exports = resolvers
